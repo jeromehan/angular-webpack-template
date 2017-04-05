@@ -3,19 +3,19 @@ var webpack = require('webpack');
 var DefinePlugin = require('webpack/lib/DefinePlugin');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
-var ngtools = require('@ngtools/webpack');
+var AddAssetHtmlPlugin = require('add-asset-html-webpack-plugin');
+var ProgressBarPlugin = require('progress-bar-webpack-plugin');
 
 module.exports = {
     entry: {
         bootstrap: [__dirname + '/src/main/webapp/bootstrap.ts', 'webpack-hot-middleware/client?reload=true'],
-        angular: ['@angular/core', '@angular/platform-browser', '@angular/platform-browser-dynamic', '@angular/common', '@angular/router', '@angular/http', '@angular/forms', '@ntesmail/shark-angular2'],
         polyfill: ['zone.js/dist/zone', 'reflect-metadata'],
-        jquery: ['jquery']
+        thirdparty: ['jquery', 'flatpickr', 'echarts']
     },
     output: {
         path: path.join(__dirname, 'build', 'client'),
         filename: 'js/[name].js',
-        chunkFilename: "js/chunk-[id].js",
+        chunkFilename: 'js/chunk-[id].js',
         publicPath: 'http://localhost:9000/'
     },
     module: {
@@ -24,7 +24,9 @@ module.exports = {
                 test: /\.ts$/,
                 loader: [
                     '@angularclass/hmr-loader',
-                    '@ngtools/webpack'
+                    'awesome-typescript-loader',
+                    'angular2-template-loader',
+                    'angular2-router-loader'
                 ]
             }, {
                 test: /\.html$/,
@@ -37,6 +39,9 @@ module.exports = {
                     name: 'images/[name].[ext]',
                     limit: 100
                 }
+            }, {
+                test: /\.css$/,
+                loader: ExtractTextPlugin.extract({ fallback: 'style-loader', use: 'css-loader' })
             }, {
                 test: /\.scss$/,
                 exclude: [
@@ -56,6 +61,15 @@ module.exports = {
             }, {
                 test: /\.ejs$/,
                 loader: 'ejs-loader'
+            }, {
+                test: /jquery/,
+                use: [{
+                    loader: 'expose-loader',
+                    options: 'jQuery'
+                }, {
+                    loader: 'expose-loader',
+                    options: '$'
+                }]
             }
         ]
     },
@@ -63,26 +77,36 @@ module.exports = {
         extensions: ['.ts', '.js']
     },
     plugins: [
+        new ProgressBarPlugin(),
         new webpack.HotModuleReplacementPlugin(),
         new webpack.NoEmitOnErrorsPlugin(),
         new DefinePlugin({
             'ENV': '"dev"'
         }),
-        new ExtractTextPlugin("css/[name].css"),
+        new ExtractTextPlugin('css/[name].css'),
         new HtmlWebpackPlugin({
             filename: 'index.html',
             template: __dirname + '/src/main/webapp/index.ejs'
         }),
         new webpack.ProvidePlugin({
-            $: "jquery",
-            jQuery: "jquery"
+            $: 'jquery',
+            jQuery: 'jquery',
+            Flatpickr: 'flatpickr',
+            echarts: 'echarts'
         }),
         new webpack.optimize.CommonsChunkPlugin({
-            name: ['bootstrap', 'angular', 'polyfill', 'jquery']
+            name: [
+                'bootstrap',
+                'polyfill',
+                'thirdparty'
+            ]
         }),
-        new ngtools.AotPlugin({
-            skipCodeGeneration: true,   //默认false. false：使用AoT ; true：不使用AoT 
-            tsConfigPath: path.join(__dirname, 'tsconfig.json')
+        new AddAssetHtmlPlugin([
+            { filepath: require.resolve('./dll/angular.dll.js') }
+        ]),
+        new webpack.DllReferencePlugin({
+            context: __dirname,
+            manifest: require(path.join(__dirname, 'dll/angular-manifest.json'))
         })
     ],
     devtool: 'source-map' //'cheap-module-source-map' | 'source-map'

@@ -14,14 +14,15 @@ var app = express();
 
 app.use(webpackDevMiddleware(compiler, {
     publicPath: webpackDevConfig.output.publicPath,
-    noInfo: true,
     stats: {
-        colors: true
+        colors: true,
+        chunks: false
+    },
+    watchOptions: {
+        poll: true
     }
 }));
-app.use(webpackHotMiddleware(compiler, {
-    reload: true
-}));
+app.use(webpackHotMiddleware(compiler));
 
 
 //font
